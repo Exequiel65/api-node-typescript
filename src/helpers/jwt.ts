@@ -2,7 +2,6 @@ import jwt, { Jwt } from 'jsonwebtoken';
 
 export class jwtToken {
     private secret: string = process.env.JWT_SECRET || 'prueba';
-
     tokenSign(user: any) {
         return jwt.sign(
             {
@@ -24,7 +23,7 @@ export class jwtToken {
 
     }
 
-    async getBearer(bearer: string) {
+    async getBearer(bearer: string | undefined) {
         const accessToken = (bearer !== undefined ? bearer : '').replace('Bearer ', '');
 
         const data = this.verifyToken(accessToken);
