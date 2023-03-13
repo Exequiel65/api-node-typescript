@@ -1,15 +1,18 @@
 import { Request, Response } from "express";
-import { userModel } from "../database/models/user";
 import { compareSync, hashSync} from "bcryptjs";
 import { jwtToken } from '../helpers/jwt';
+import { httpStatus } from "../helpers/httpStatus";
+import { UserRepository } from '../repository/user.repository';
+import { IUser } from '../interface/user.interface';
 
+const userRepository = new UserRepository();
 const jwt = new jwtToken();
 
 class AuthController{
     async getUsuario(req: Request, res: Response){
         let user: any;
         try {
-            user = await userModel.find({});
+            user = await userRepository.getUser({});
         } catch (error) {
             console.log(error)
             throw new Error()
@@ -23,12 +26,12 @@ class AuthController{
     async processLogin(req: Request, res: Response){
         let {email, password} = req.body;
         let user : any;
-
         try {
-            user = await userModel.findOne({email});
+            user = await userRepository.getUser({email})
         } catch (error) {
+            console.log(error)
             return res.status(500).json({
-                msg: error
+                msg: 'Something went wrong, the server was unable to complete your request'
             })
         }
 
@@ -50,6 +53,41 @@ class AuthController{
             user
         })
         
+    }
+
+    async processRegister(req: Request, res:Response){
+        let {name, password, email, admin} = req.body;
+
+        let user: IUser = {
+            name,
+            password: hashSync(password, 10),
+            email : email.trim(),
+            admin : admin ? admin : false
+        }
+
+        try {
+            let existUser = await userRepository.searchFastUser({email});
+            if (existUser) {
+                return res.status(httpStatus.BAD_REQUEST).json({
+                    msg : 'Email is register'
+                })
+            }
+            user = await userRepository.createUser(user)
+        } catch (error) {
+            console.log(error)
+            return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({
+                msg: 'Something went wrong, the server was unable to complete your request'
+            })
+        }
+
+        let token = jwt.tokenSign(user);
+        res.status(httpStatus.CREATED).json({
+            msg : 'User succesfelly created',
+            token,
+            user
+        })
+
+
     }
 }
 
